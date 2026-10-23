@@ -1,6 +1,67 @@
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import { Camera, Trash2, Check, AlertCircle, RefreshCw } from "lucide-react";
 import { useAuth } from "../../context/AuthContext";
+
+/**
+ * Resizes and compresses an image to max 320x320 JPEG.
+ * This shrinks photos from megabytes to ~15KB-30KB,
+ * ensuring they never blow browser localStorage quotas or crash the application.
+ */
+function compressProfilePhoto(file) {
+  return new Promise((resolve, reject) => {
+    if (!file || !file.type.startsWith("image/")) {
+      return reject(new Error("Please select a valid image file."));
+    }
+
+    const reader = new FileReader();
+    reader.onerror = () => reject(new Error("Failed to read image file."));
+    reader.onload = (e) => {
+      const img = new Image();
+      img.onerror = () => reject(new Error("Failed to load image."));
+      img.onload = () => {
+        try {
+          const MAX_DIM = 320;
+          let width = img.width;
+          let height = img.height;
+
+          if (width > MAX_DIM || height > MAX_DIM) {
+            if (width > height) {
+              height = Math.round((height * MAX_DIM) / width);
+              width = MAX_DIM;
+            } else {
+              width = Math.round((width * MAX_DIM) / height);
+              height = MAX_DIM;
+            }
+          }
+
+          const canvas = document.createElement("canvas");
+          canvas.width = Math.max(width, 1);
+          canvas.height = Math.max(height, 1);
+          const ctx = canvas.getContext("2d");
+          if (!ctx) {
+            return resolve(e.target.result);
+          }
+
+          // Pre-fill canvas with white for transparent backgrounds (PNG/GIF)
+          ctx.fillStyle = "#ffffff";
+          ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+          ctx.imageSmoothingEnabled = true;
+          ctx.imageSmoothingQuality = "high";
+          ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+
+          // 0.82 quality gives crisp visuals with a ~15KB-30KB payload
+          const compressed = canvas.toDataURL("image/jpeg", 0.82);
+          resolve(compressed);
+        } catch (err) {
+          resolve(e.target.result);
+        }
+      };
+      img.src = e.target.result;
+    };
+    reader.readAsDataURL(file);
+  });
+}
 
 export default function ProfilePhotoUpload({
   photoUrl,
@@ -16,9 +77,13 @@ export default function ProfilePhotoUpload({
   const [success, setSuccess] = useState("");
   const fileInputRef = useRef(null);
 
+  useEffect(() => {
+    setPreview(photoUrl || user?.photoUrl || "");
+  }, [photoUrl, user?.photoUrl]);
+
   const activePhoto = preview || photoUrl || user?.photoUrl || "";
 
-  const handleFileSelect = (e) => {
+  const handleFileSelect = async (e) => {
     setError("");
     setSuccess("");
     const file = e.target.files?.[0];
@@ -31,37 +96,35 @@ export default function ProfilePhotoUpload({
       return;
     }
 
-    // Validation: file size (max 5MB)
-    const maxSize = 5 * 1024 * 1024;
+    // Validation: file size (allow up to 10MB input before compression)
+    const maxSize = 10 * 1024 * 1024;
     if (file.size > maxSize) {
-      setError("Image size must be less than 5MB.");
+      setError("Image size must be less than 10MB.");
       return;
     }
 
-    // Read as Data URL
-    const reader = new FileReader();
-    reader.onload = (uploadEvent) => {
-      const dataUrl = uploadEvent.target?.result;
-      if (dataUrl) {
-        setPreview(dataUrl);
-        setSuccess("Photo updated successfully!");
-        setTimeout(() => setSuccess(""), 3000);
+    try {
+      const dataUrl = await compressProfilePhoto(file);
+      setPreview(dataUrl);
+      setSuccess("Photo updated successfully!");
+      setTimeout(() => setSuccess(""), 3000);
 
-        if (onPhotoChange) {
-          onPhotoChange(dataUrl);
-        }
-        if (autoSave) {
-          updateUser({ photoUrl: dataUrl });
-        }
+      if (onPhotoChange) {
+        onPhotoChange(dataUrl);
       }
-    };
-    reader.onerror = () => {
-      setError("Failed to read image file. Please try another image.");
-    };
-    reader.readAsDataURL(file);
+      if (autoSave) {
+        await updateUser({ photoUrl: dataUrl });
+      }
+    } catch (err) {
+      setError(err?.message || "Failed to read image file. Please try another image.");
+    } finally {
+      if (fileInputRef.current) {
+        fileInputRef.current.value = "";
+      }
+    }
   };
 
-  const handleRemove = (e) => {
+  const handleRemove = async (e) => {
     e.stopPropagation();
     setPreview("");
     setError("");
@@ -75,7 +138,11 @@ export default function ProfilePhotoUpload({
       onPhotoChange("");
     }
     if (autoSave) {
-      updateUser({ photoUrl: "" });
+      try {
+        await updateUser({ photoUrl: "" });
+      } catch (err) {
+        console.warn("Could not remove photo on backend:", err);
+      }
     }
   };
 

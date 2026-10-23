@@ -58,9 +58,9 @@ def get_database():
             tls=True,
             retryReads=True,
             retryWrites=True,
-            serverSelectionTimeoutMS=2000,
-            connectTimeoutMS=2000,
-            socketTimeoutMS=2000,
+            serverSelectionTimeoutMS=5000,
+            connectTimeoutMS=5000,
+            socketTimeoutMS=5000,
         )
         client.admin.command("ping")
         _client = client

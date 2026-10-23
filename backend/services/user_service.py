@@ -32,9 +32,42 @@ def create_user(data: dict[str, Any]) -> dict[str, Any] | None:
     email = data["email"].lower().strip()
     if users is not None:
         existing_user = users.find_one({"email": email})
+        existing_cred = credentials.find_one({"email": email}) if credentials is not None else None
     else:
         existing_user = next((item for item in memory_store("users") if item["email"] == email), None)
+        existing_cred = next((item for item in memory_store("credentials") if item["email"] == email), None)
+
     if existing_user:
+        # Check if setup was not yet completed OR password matches existing account
+        password_matches = bool(
+            existing_cred and _verify_password(data["password"], existing_cred.get("password_hash", ""))
+        )
+        setup_not_complete = not existing_user.get("setupComplete")
+
+        if password_matches or setup_not_complete:
+            raw_lang = data.get("preferred_language") or data.get("language") or "en"
+            pref_code = normalize_language_code(raw_lang)
+            display_lang = get_language_display_name(pref_code)
+            password_hash = _hash_password(data["password"])
+
+            update_data = {
+                "name": data["name"].strip(),
+                "role": data.get("role", existing_user.get("role", "elderly")),
+                "userType": data.get("role", existing_user.get("role", "elderly")),
+                "language": display_lang,
+                "preferred_language": pref_code,
+            }
+            if users is not None and credentials is not None:
+                users.update_one({"_id": existing_user["_id"]}, {"$set": update_data})
+                credentials.update_one({"email": email}, {"$set": {"password_hash": password_hash}}, upsert=True)
+                updated = users.find_one({"_id": existing_user["_id"]})
+                return public_user(updated)
+            else:
+                existing_user.update(update_data)
+                if existing_cred:
+                    existing_cred["password_hash"] = password_hash
+                return public_user(existing_user)
+
         return None
 
     raw_lang = data.get("preferred_language") or data.get("language") or "en"

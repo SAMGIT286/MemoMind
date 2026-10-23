@@ -105,14 +105,24 @@ export function AuthProvider({ children }) {
   // Sync user changes to localStorage
   useEffect(() => {
     if (user) {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(user));
+      try {
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(user));
+      } catch (err) {
+        console.warn("Failed to persist user to localStorage:", err);
+      }
       if (user.language && getLanguageDisplayName(user.language) !== language) {
         const fullLang = getLanguageDisplayName(user.language);
         setLanguageState(fullLang);
-        localStorage.setItem(LANG_STORAGE_KEY, fullLang);
+        try {
+          localStorage.setItem(LANG_STORAGE_KEY, fullLang);
+        } catch (err) {
+          console.warn("Failed to persist language to localStorage:", err);
+        }
       }
     } else {
-      localStorage.removeItem(STORAGE_KEY);
+      try {
+        localStorage.removeItem(STORAGE_KEY);
+      } catch {}
     }
   }, [user]);
 
@@ -135,7 +145,9 @@ export function AuthProvider({ children }) {
           },
         };
         setUser(nextUser);
-        localStorage.setItem(STORAGE_KEY, JSON.stringify(nextUser));
+        try {
+          localStorage.setItem(STORAGE_KEY, JSON.stringify(nextUser));
+        } catch {}
 
         if (user.id) {
           updateUserApi(user.id, {
@@ -228,7 +240,9 @@ export function AuthProvider({ children }) {
     setUser(next);
     if (patch.language && getLanguageDisplayName(patch.language) !== language) {
       setLanguageState(nextLang);
-      localStorage.setItem(LANG_STORAGE_KEY, nextLang);
+      try {
+        localStorage.setItem(LANG_STORAGE_KEY, nextLang);
+      } catch {}
     }
 
     if (next.email) {
@@ -237,11 +251,19 @@ export function AuthProvider({ children }) {
       try {
         existingAcc = JSON.parse(localStorage.getItem(`memomind_account_${cleanEmail}`) || "{}");
       } catch {}
-      localStorage.setItem(`memomind_account_${cleanEmail}`, JSON.stringify({ ...existingAcc, user: next }));
+      try {
+        localStorage.setItem(`memomind_account_${cleanEmail}`, JSON.stringify({ ...existingAcc, user: next }));
+      } catch (err) {
+        console.warn("Failed to persist account to localStorage:", err);
+      }
     }
 
     if (next.id) {
-      return updateUserApi(next.id, patch);
+      try {
+        return await updateUserApi(next.id, patch);
+      } catch (err) {
+        console.warn("Failed to sync profile update to backend:", err);
+      }
     }
     return { user: next };
   };

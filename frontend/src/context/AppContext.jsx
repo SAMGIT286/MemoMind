@@ -189,23 +189,43 @@ export function AppProvider({ children }) {
 
   // Persist to localStorage
   useEffect(() => {
-    localStorage.setItem(`memomind_${prefix}_medicines`, JSON.stringify(medicines));
+    try {
+      localStorage.setItem(`memomind_${prefix}_medicines`, JSON.stringify(medicines));
+    } catch (e) {
+      console.warn("Could not persist medicines to localStorage:", e);
+    }
   }, [prefix, medicines]);
 
   useEffect(() => {
-    localStorage.setItem(`memomind_${prefix}_appointments`, JSON.stringify(appointments));
+    try {
+      localStorage.setItem(`memomind_${prefix}_appointments`, JSON.stringify(appointments));
+    } catch (e) {
+      console.warn("Could not persist appointments to localStorage:", e);
+    }
   }, [prefix, appointments]);
 
   useEffect(() => {
-    localStorage.setItem(`memomind_${prefix}_memories`, JSON.stringify(memories));
+    try {
+      localStorage.setItem(`memomind_${prefix}_memories`, JSON.stringify(memories));
+    } catch (e) {
+      console.warn("Could not persist memories to localStorage:", e);
+    }
   }, [prefix, memories]);
 
   useEffect(() => {
-    localStorage.setItem(`memomind_${prefix}_chat`, JSON.stringify(chat));
+    try {
+      localStorage.setItem(`memomind_${prefix}_chat`, JSON.stringify(chat));
+    } catch (e) {
+      console.warn("Could not persist chat to localStorage:", e);
+    }
   }, [prefix, chat]);
 
   useEffect(() => {
-    localStorage.setItem(`memomind_${prefix}_notifications`, JSON.stringify(notifications));
+    try {
+      localStorage.setItem(`memomind_${prefix}_notifications`, JSON.stringify(notifications));
+    } catch (e) {
+      console.warn("Could not persist notifications to localStorage:", e);
+    }
   }, [prefix, notifications]);
 
   // Background Batch Translation Worker for User-Generated Data

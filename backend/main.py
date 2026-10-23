@@ -52,18 +52,24 @@ app.include_router(translations_router)
 
 # Add your frontend origin to FRONTEND_ORIGINS in .env
 # if your frontend uses a different port or host.
+default_frontend_origins = (
+    "http://localhost:5173,http://127.0.0.1:5173,"
+    "http://localhost:5174,http://127.0.0.1:5174,"
+    "http://localhost:5175,http://127.0.0.1:5175,"
+    "http://localhost:3000,http://127.0.0.1:3000,"
+    "http://localhost:4173,http://127.0.0.1:4173"
+)
+
 origins = [
     origin.strip()
-    for origin in os.getenv(
-        "FRONTEND_ORIGINS",
-        "http://localhost:5173,http://127.0.0.1:5173"
-    ).split(",")
+    for origin in os.getenv("FRONTEND_ORIGINS", default_frontend_origins).split(",")
     if origin.strip()
 ]
 
 app.add_middleware(
     CORSMiddleware,
     allow_origins=origins,
+    allow_origin_regex=r"^https?://(localhost|127\.0\.0\.1)(:[0-9]+)?$",
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],

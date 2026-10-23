@@ -25,19 +25,18 @@ export default function PersonalDetails() {
   useEffect(() => {
     if (user) {
       setForm((prev) => ({
-        ...prev,
-        name: user.name || prev.name,
-        email: user.email || prev.email,
-        phone: user.phone || prev.phone,
-        dob: user.dob || prev.dob,
-        age: user.age || (user.dob ? calculateAge(user.dob) : prev.age),
-        gender: user.gender || prev.gender,
-        location: user.location || prev.location,
-        language: user.language || prev.language,
-        timezone: user.timezone || prev.timezone,
+        name: prev.name || user.name || "",
+        email: prev.email || user.email || "",
+        phone: prev.phone || user.phone || "",
+        dob: prev.dob || user.dob || "",
+        age: prev.age || (user.dob ? calculateAge(user.dob) : ""),
+        gender: prev.gender || user.gender || "Male",
+        location: prev.location || user.location || "",
+        language: prev.language || user.language || language || "English",
+        timezone: prev.timezone || user.timezone || "(UTC+05:30) India Standard Time",
       }));
     }
-  }, [user]);
+  }, [user?.id]);
 
   const handleDobChange = (e) => {
     const dobValue = e.target.value;
@@ -61,7 +60,7 @@ export default function PersonalDetails() {
     setError("");
   };
 
-  const handleNextAction = () => {
+  const handleNextAction = async () => {
     setError("");
 
     // 1. Name validation
@@ -96,7 +95,7 @@ export default function PersonalDetails() {
     }
 
     // Save details to user state & persistent storage
-    updateUser({
+    await updateUser({
       name: form.name.trim(),
       email: form.email.trim(),
       phone: form.phone.trim(),
