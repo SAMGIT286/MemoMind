@@ -1,0 +1,12 @@
+
+fastapi
+uvicorn[standard]
+httpx
+python-dotenv
+pymongo
+pillow
+python-multipart
+ultralytics
+email-validator
+insightface
+onnxruntime

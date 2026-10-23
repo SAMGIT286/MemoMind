@@ -1,0 +1,1 @@
+# MongoDB collection definitions placeholder
